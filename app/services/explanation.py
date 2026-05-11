@@ -77,6 +77,12 @@ def _system_prompt(output_language: OutputLanguage, topic_hint: str | None) -> s
         "realistic examples, and language that matches OUTPUT_LANGUAGE exactly.\n"
         f"{lang}{focus}\n"
         "Include at least two visual_briefs: one animation_storyboard and one mermaid when possible.\n"
+        "For mermaid_diagram, use classDef to color and style nodes: "
+        "classDef main fill:#ffe082,stroke:#333,stroke-width:2px; "
+        "classDef asexual fill:#b2dfdb,stroke:#333,stroke-width:2px; "
+        "classDef sexual fill:#f8bbd0,stroke:#333,stroke-width:2px; "
+        "Assign class main to main concepts, asexual to asexual reproduction nodes, sexual to sexual reproduction nodes. "
+        "Use subgraphs to group related nodes if possible. Add icons or emojis for extra clarity if appropriate.\n"
         + _JSON_CONTRACT
     )
 
@@ -131,6 +137,33 @@ def _sanitize_mermaid_diagram(raw: str | None) -> str | None:
         .replace("\u2013", "-")
         .replace("\u2014", "-")
     )
+    # Inject enhanced classDefs if not present
+    # Force high-contrast, readable colors for all classes
+    if "classDef main" not in diagram:
+        diagram += ("\nclassDef main fill:#fffde7,stroke:#111,stroke-width:2px,color:#111;")  # very light yellow, black text
+    if "classDef asexual" not in diagram:
+        diagram += ("\nclassDef asexual fill:#e3f2fd,stroke:#111,stroke-width:2px,color:#111;")  # very light blue, black text
+    if "classDef sexual" not in diagram:
+        diagram += ("\nclassDef sexual fill:#fce4ec,stroke:#111,stroke-width:2px,color:#111;")  # very light pink, black text
+
+    # Assign classes to nodes if not present
+    # Only for flowchart TD or graph LR diagrams
+    lines = diagram.splitlines()
+    node_lines = [i for i, l in enumerate(lines) if re.match(r"^\s*[A-Za-z0-9_]+\[", l)]
+    for i in node_lines:
+        line = lines[i]
+        if 'class ' not in diagram:
+            # Assign classes based on keywords
+            if any(word in line.lower() for word in ["asexual", "binary fission", "budding", "fragmentation", "vegetative"]):
+                node_id = line.split("[")[0].strip()
+                lines.append(f"class {node_id} asexual;")
+            elif any(word in line.lower() for word in ["sexual", "gamete", "zygote", "fertilisation", "fertilization"]):
+                node_id = line.split("[")[0].strip()
+                lines.append(f"class {node_id} sexual;")
+            elif any(word in line.lower() for word in ["organism", "reproduction", "main", "individual"]):
+                node_id = line.split("[")[0].strip()
+                lines.append(f"class {node_id} main;")
+    diagram = "\n".join(lines)
     return diagram
 
 
@@ -241,6 +274,18 @@ def _coerce_explain_dict(data: dict) -> dict:
             },
         ]
     d["visual_briefs"] = vb
+
+    # --- Guarantee at least one diagram per subtopic (visual_brief) ---
+    # If a visual_brief is a diagram/mermaid and has no mermaid_diagram, fill it with the main diagram or a placeholder.
+    main_mermaid = d.get("mermaid_diagram")
+    for b in d["visual_briefs"]:
+        if (
+            b.get("kind") == "diagram"
+            and b.get("suggested_format") == "mermaid"
+            and not b.get("mermaid_diagram")
+        ):
+            # Use the main diagram if present, else a placeholder
+            b["mermaid_diagram"] = main_mermaid or "flowchart TD\nA[\"Diagram not available\"]"
     topics = d.get("suggested_followup_topics")
     if not isinstance(topics, list):
         d["suggested_followup_topics"] = []

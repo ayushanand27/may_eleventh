@@ -34,7 +34,7 @@ import { MermaidDiagram } from './MermaidDiagram'
 import './App.css'
 
 type Mode = 'text' | 'images' | 'pdf'
-type MainTab = 'learn' | 'video' | 'quiz' | 'slides' | 'flashcards' | 'infographic' | 'listen'
+type MainTab = 'learn' | 'video' | 'quiz' | 'slides' | 'flashcards' | 'infographic' | 'listen' | 'images'
 
 /** Fenced ```mermaid in explanation_markdown — render with the same pipeline as `mermaid_diagram`. */
 function MarkdownPre({ children, ...rest }: ComponentPropsWithoutRef<'pre'>) {
@@ -635,6 +635,9 @@ function App() {
         <button type="button" className={mainTab === 'learn' ? 'active' : ''} onClick={() => setMainTab('learn')}>
           Learn
         </button>
+        <button type="button" className={mainTab === 'images' ? 'active' : ''} onClick={() => setMainTab('images')}>
+          Images
+        </button>
         <button type="button" className={mainTab === 'video' ? 'active' : ''} onClick={() => setMainTab('video')}>
           Video
         </button>
@@ -644,14 +647,14 @@ function App() {
         <button type="button" className={mainTab === 'slides' ? 'active' : ''} onClick={() => setMainTab('slides')}>
           Slides
         </button>
-        <button type="button" className={mainTab === 'flashcards' ? 'active' : ''} onClick={() => setMainTab('flashcards')}>
-          Flashcards
-        </button>
         <button
           type="button"
-          className={mainTab === 'infographic' ? 'active' : ''}
-          onClick={() => setMainTab('infographic')}
+          className={mainTab === 'flashcards' ? 'active' : ''}
+          onClick={() => setMainTab('flashcards')}
         >
+          Flashcards
+        </button>
+        <button type="button" className={mainTab === 'infographic' ? 'active' : ''} onClick={() => setMainTab('infographic')}>
           Infographic
         </button>
         <button type="button" className={mainTab === 'listen' ? 'active' : ''} onClick={() => setMainTab('listen')}>
@@ -815,6 +818,58 @@ function App() {
                       alt={illustrationUsePexels ? 'Pexels stock photo' : 'Generated illustration'}
                     />
                   )}
+                  {/* --- Show all images at the bottom --- */}
+                  <div style={{ marginTop: '2rem' }}>
+                    <h2>All Images & Subtopic Diagrams</h2>
+                    <div className="all-images-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                      {/* Show all images from visual_briefs with src */}
+                      {result.visual_briefs.filter(b => b.src).map((b, i) => (
+                        <div key={`img-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <img
+                            className="illustration-img"
+                            src={b.src!}
+                            alt={b.title || 'Visual'}
+                          />
+                          <span className="hint">{b.title}</span>
+                        </div>
+                      ))}
+                      {/* Show all subtopic diagrams from visual_briefs with mermaid_diagram */}
+                      {result.visual_briefs.filter(b => b.mermaid_diagram).map((b, i) => (
+                        <div key={`diagram-${i}`} style={{ minWidth: 320, maxWidth: 420, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="diagram-box" style={{ width: '100%' }}>
+                            <MermaidDiagram code={b.mermaid_diagram!} />
+                          </div>
+                          <div style={{ fontWeight: 500, marginTop: 4 }}>{b.title}</div>
+                          <div className="hint" style={{ marginBottom: 8 }}>{b.description}</div>
+                        </div>
+                      ))}
+                      {/* Show illustrationSrc and infoImage if present */}
+                      {illustrationSrc && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <img
+                            className="illustration-img"
+                            src={illustrationSrc}
+                            alt={illustrationUsePexels ? 'Pexels stock photo' : 'Generated illustration'}
+                          />
+                          <span className="hint">AI/Pexels Illustration</span>
+                        </div>
+                      )}
+                      {infoImage && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <img
+                            className="illustration-img"
+                            src={infoImage.src}
+                            alt={infoImage.prompt || 'Relevant image'}
+                          />
+                          <span className="hint">Relevant Image</span>
+                        </div>
+                      )}
+                      {/* Fallback if nothing is present */}
+                      {result.visual_briefs.filter(b => b.src || b.mermaid_diagram).length === 0 && !illustrationSrc && !infoImage && (
+                        <span style={{ color: '#888', fontStyle: 'italic' }}>No images or subtopic diagrams generated for this lesson yet.</span>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
             </section>
