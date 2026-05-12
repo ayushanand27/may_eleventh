@@ -134,8 +134,6 @@ function App() {
   const [illustrationErr, setIllustrationErr] = useState<string | null>(null)
   const [illustrationUsePexels, setIllustrationUsePexels] = useState(false)
 
-  const [pipelineStatus, setPipelineStatus] = useState<string | null>(null)
-
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopPoll = useCallback(() => {
@@ -323,7 +321,6 @@ function App() {
 
   const runExplain = async () => {
     setError(null)
-    setPipelineStatus(null)
     setResult(null)
     setQuizError(null)
     setQuizData(null)
@@ -369,7 +366,6 @@ function App() {
 
     setLoading(true)
     try {
-      setPipelineStatus('Writing explanation…')
       let data: ExplainResponse
       if (mode === 'text') {
         data = await explainFromText(chapterText, outputLanguage, topicHint, stack)
@@ -385,26 +381,13 @@ function App() {
 
       const ctx = getLessonContextFromExplain(data)
 
-      setPipelineStatus('Generating quiz…')
       await runQuizPipeline(ctx, topic)
-
-      setPipelineStatus('Building slide deck…')
       await runSlideDeckPipeline(ctx, topic)
-
-      setPipelineStatus('Generating flashcards…')
       await runFlashcardsPipeline(ctx, topic)
-
-      setPipelineStatus('Creating infographic…')
       await runInfographicPipeline(ctx, topic)
-
-      setPipelineStatus('Synthesizing lesson audio…')
       await runLessonAudioPipeline(ctx)
-
-      setPipelineStatus('Done — open Quiz, Slides, Flashcards, Infographic, or Listen to review. Video stays on the Video tab.')
-      window.setTimeout(() => setPipelineStatus(null), 8000)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
-      setPipelineStatus(null)
     } finally {
       setLoading(false)
     }
@@ -624,9 +607,8 @@ function App() {
         <div className="app-header-main app-header-panel">
           <h1>ClassroomAI</h1>
           <p className="sub">
-            On Learn, Generate explanation builds the lesson, then runs quiz, slides, flashcards, infographic, and audio
-            one after another (not video — use the Video tab for that). Each tab still has its own Generate if you want
-            to redo one piece.
+            Create a lesson from chapter text, screenshots, or a PDF — then review it with a quiz, flashcards, slides,
+            an infographic, and audio.
           </p>
         </div>
       </header>
@@ -688,13 +670,13 @@ function App() {
         <>
           <div className="tabs" style={{ marginTop: '0.75rem' }}>
             <button type="button" className={mode === 'text' ? 'active' : ''} onClick={() => setMode('text')}>
-              Chapter text
+              Text
             </button>
             <button type="button" className={mode === 'images' ? 'active' : ''} onClick={() => setMode('images')}>
               Screenshots
             </button>
             <button type="button" className={mode === 'pdf' ? 'active' : ''} onClick={() => setMode('pdf')}>
-              PDF chapter
+              PDF
             </button>
           </div>
 
@@ -743,10 +725,9 @@ function App() {
                 <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])} />
               </label>
             )}
-            <div className="row">
-              <button type="button" className="primary" disabled={loading} onClick={runExplain}>{loading ? 'Working…' : 'Generate explanation'}</button>
+            <div className="row learn-actions">
+              <button type="button" className="primary" disabled={loading} onClick={runExplain}>{loading ? 'Creating lesson…' : 'Start Learn'}</button>
             </div>
-            {pipelineStatus && <p className="hint">{pipelineStatus}</p>}
             {error && <p className="err">{error}</p>}
           </div>
 
@@ -786,7 +767,7 @@ function App() {
 
               {result.visual_briefs.length > 0 && (
                 <>
-                  <h2 style={{ marginTop: '1.25rem' }}>Visuals &amp; animation ideas</h2>
+                  <h2 style={{ marginTop: '1.25rem' }}>Visual ideas</h2>
                   <div className="briefs">
                     {result.visual_briefs.map((b, i) => (
                       <div className="brief" key={i}><span className="brief-badge">{briefKindLabel(b)}</span><strong>{b.title}</strong><div>{b.description}</div></div>
@@ -799,15 +780,15 @@ function App() {
                         checked={illustrationUsePexels}
                         onChange={(e) => setIllustrationUsePexels(e.target.checked)}
                       />
-                      <span className="hint">Stock photo (Pexels)</span>
+                      <span className="hint">Use stock image</span>
                     </label>
                     <button type="button" className="secondary" disabled={illustrationBusy || loading} onClick={runIllustration}>
-                      {illustrationBusy ? (illustrationUsePexels ? 'Loading…' : 'Drawing…') : illustrationUsePexels ? 'Stock illustration' : 'AI illustration'}
+                      {illustrationBusy ? (illustrationUsePexels ? 'Loading…' : 'Drawing…') : illustrationUsePexels ? 'Generate stock image' : 'Generate image'}
                     </button>
                   </div>
                   {illustrationUsePexels && (
                     <p className="hint" style={{ marginTop: '0.35rem' }}>
-                      Uses your first visual brief as search keywords. Needs <code>PEXELS_API_KEY</code> on the server.
+                      Uses the first visual idea as search keywords. Needs <code>PEXELS_API_KEY</code> on the server.
                     </p>
                   )}
                   {illustrationErr && <p className="err">{illustrationErr}</p>}
@@ -820,7 +801,7 @@ function App() {
                   )}
                   {/* --- Show all images at the bottom --- */}
                   <div style={{ marginTop: '2rem' }}>
-                    <h2>All Images & Subtopic Diagrams</h2>
+                    <h2>Visual gallery</h2>
                     <div className="asset-grid">
                       {result.visual_briefs.map((b, i) => (
                         <article className="asset-card" key={`asset-${i}`}>
@@ -839,31 +820,30 @@ function App() {
                       ))}
                       {illustrationSrc ? (
                         <article className="asset-card">
-                          <div className="brief-badge">Generated illustration</div>
-                          <strong>{illustrationUsePexels ? 'Pexels / stock image' : 'AI illustration'}</strong>
+                          <strong>{illustrationUsePexels ? 'Stock image' : 'Image'}</strong>
                           <div className="hint asset-desc">
                             {illustrationUsePexels
                               ? 'A searchable stock image related to the current lesson.'
-                              : 'A generated illustration made from the active visual prompt.'}
+                              : 'An illustration related to the lesson topic.'}
                           </div>
                           <img
                             className="illustration-img asset-img"
                             src={illustrationSrc}
-                            alt={illustrationUsePexels ? 'Pexels stock photo' : 'Generated illustration'}
+                            alt={illustrationUsePexels ? 'Pexels stock photo' : 'Illustration'}
                           />
                         </article>
                       ) : null}
                       {infoImage ? (
                         <article className="asset-card">
-                          <div className="brief-badge">Relevant image</div>
-                          <strong>Reference image</strong>
+                          <div className="brief-badge">Reference image</div>
+                          <strong>Lesson image</strong>
                           <div className="hint asset-desc">{infoImage.prompt || 'A lesson-related supporting image.'}</div>
                           <img className="illustration-img asset-img" src={infoImage.src} alt={infoImage.prompt || 'Relevant image'} />
                         </article>
                       ) : null}
                       {result.visual_briefs.filter((b) => b.src || b.mermaid_diagram).length === 0 && !illustrationSrc && !infoImage && (
                         <span style={{ color: '#888', fontStyle: 'italic' }}>
-                          No images or subtopic diagrams generated for this lesson yet.
+                          No visuals yet.
                         </span>
                       )}
                     </div>
@@ -1248,7 +1228,7 @@ function App() {
           {infoErr && <p className="err">{infoErr}</p>}
           {infoImage && (
             <div className="infographic-wrap">
-              <img className="infographic-img" src={infoImage.src} alt="Generated lesson infographic" />
+              <img className="infographic-img" src={infoImage.src} alt="Lesson infographic" />
               {infoImage.prompt ? (
                 <details className="infographic-prompt-details">
                   <summary>Image prompt used</summary>
