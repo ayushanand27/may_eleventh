@@ -821,52 +821,50 @@ function App() {
                   {/* --- Show all images at the bottom --- */}
                   <div style={{ marginTop: '2rem' }}>
                     <h2>All Images & Subtopic Diagrams</h2>
-                    <div className="all-images-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'flex-start', alignItems: 'flex-start' }}>
-                      {/* Show all images from visual_briefs with src */}
-                      {result.visual_briefs.filter(b => b.src).map((b, i) => (
-                        <div key={`img-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <img
-                            className="illustration-img"
-                            src={b.src!}
-                            alt={b.title || 'Visual'}
-                          />
-                          <span className="hint">{b.title}</span>
-                        </div>
+                    <div className="asset-grid">
+                      {result.visual_briefs.map((b, i) => (
+                        <article className="asset-card" key={`asset-${i}`}>
+                          <div className="brief-badge">{briefKindLabel(b)}</div>
+                          <strong>{b.title}</strong>
+                          <div className="hint asset-desc">{b.description}</div>
+                          {b.src ? (
+                            <img className="illustration-img asset-img" src={b.src} alt={b.title || 'Visual'} />
+                          ) : null}
+                          {b.mermaid_diagram ? (
+                            <div className="diagram-box asset-diagram">
+                              <MermaidDiagram code={b.mermaid_diagram} />
+                            </div>
+                          ) : null}
+                        </article>
                       ))}
-                      {/* Show all subtopic diagrams from visual_briefs with mermaid_diagram */}
-                      {result.visual_briefs.filter(b => b.mermaid_diagram).map((b, i) => (
-                        <div key={`diagram-${i}`} style={{ minWidth: 320, maxWidth: 420, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <div className="diagram-box" style={{ width: '100%' }}>
-                            <MermaidDiagram code={b.mermaid_diagram!} />
+                      {illustrationSrc ? (
+                        <article className="asset-card">
+                          <div className="brief-badge">Generated illustration</div>
+                          <strong>{illustrationUsePexels ? 'Pexels / stock image' : 'AI illustration'}</strong>
+                          <div className="hint asset-desc">
+                            {illustrationUsePexels
+                              ? 'A searchable stock image related to the current lesson.'
+                              : 'A generated illustration made from the active visual prompt.'}
                           </div>
-                          <div style={{ fontWeight: 500, marginTop: 4 }}>{b.title}</div>
-                          <div className="hint" style={{ marginBottom: 8 }}>{b.description}</div>
-                        </div>
-                      ))}
-                      {/* Show illustrationSrc and infoImage if present */}
-                      {illustrationSrc && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           <img
-                            className="illustration-img"
+                            className="illustration-img asset-img"
                             src={illustrationSrc}
                             alt={illustrationUsePexels ? 'Pexels stock photo' : 'Generated illustration'}
                           />
-                          <span className="hint">AI/Pexels Illustration</span>
-                        </div>
-                      )}
-                      {infoImage && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <img
-                            className="illustration-img"
-                            src={infoImage.src}
-                            alt={infoImage.prompt || 'Relevant image'}
-                          />
-                          <span className="hint">Relevant Image</span>
-                        </div>
-                      )}
-                      {/* Fallback if nothing is present */}
-                      {result.visual_briefs.filter(b => b.src || b.mermaid_diagram).length === 0 && !illustrationSrc && !infoImage && (
-                        <span style={{ color: '#888', fontStyle: 'italic' }}>No images or subtopic diagrams generated for this lesson yet.</span>
+                        </article>
+                      ) : null}
+                      {infoImage ? (
+                        <article className="asset-card">
+                          <div className="brief-badge">Relevant image</div>
+                          <strong>Reference image</strong>
+                          <div className="hint asset-desc">{infoImage.prompt || 'A lesson-related supporting image.'}</div>
+                          <img className="illustration-img asset-img" src={infoImage.src} alt={infoImage.prompt || 'Relevant image'} />
+                        </article>
+                      ) : null}
+                      {result.visual_briefs.filter((b) => b.src || b.mermaid_diagram).length === 0 && !illustrationSrc && !infoImage && (
+                        <span style={{ color: '#888', fontStyle: 'italic' }}>
+                          No images or subtopic diagrams generated for this lesson yet.
+                        </span>
                       )}
                     </div>
                   </div>
